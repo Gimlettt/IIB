@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the DataFrame(containing the data)
-data_df = pd.read_pickle("/Users/jerry/Desktop/AR/logged_train_data_preprocessed/train_data_df_PINCH")
+data_df = pd.read_pickle("/Users/jerry/Desktop/AR/logged_train_data_preprocessed/train_data_df_DEPTH0")
 
 # Load the labels
-labels = np.load("/Users/jerry/Desktop/AR/logged_train_data_preprocessed/train_data_labels_PINCH.npy", allow_pickle=True)
+labels = np.load("/Users/jerry/Desktop/AR/logged_train_data_preprocessed/train_data_labels_DEPTH0.npy", allow_pickle=True)
 
 # Check the data
 print("Data shape:", data_df.shape) 
@@ -58,4 +58,4 @@ def plot_feature_by_label(data_df, labels, feature_index):
     plt.show()
 
 # Example usage: plot the first feature (index 0)
-plot_feature_by_label(data_df, labels, feature_index=0)
+plot_feature_by_label(data_df, labels, feature_index=45)
