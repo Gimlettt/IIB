@@ -4,7 +4,7 @@ This repository contains the data, scripts, and methods for analyzing the result
 
 ## Folder Structure
 
-- **raw_data**: Contains the raw data for the first experiment.
+- **row_data**: Contains the raw data for the first experiment.
 - **taskname_frame**: Includes the row numbers and labels indicating whether each data point is intentional or not for each participant in the first experiment.
 - **extracted_datafile_taskname**: Contains extracted rows related to velocity and deviation calculations for the first experiment.
 - **experiment_data**: Contains data and questionnaires for the second experiment.
