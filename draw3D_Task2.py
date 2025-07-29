@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, CheckButtons
-from Process_Slider import process_slider_events
 import re
 from datetime import datetime
 
@@ -87,38 +86,51 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     show_trajectory = True
     # Initialize the state variable
     is_selected = False  # Starts as False, assuming "RELEASED" initially
+
+    # Scatter plot for trajectory points
+    scat = ax.scatter([], [], [], c=[], cmap='bwr', s=10)  # Initialize empty scatter plot with color map
+
+    # Initialize line plot for single-point view
+    line, = ax.plot([], [], [], 'o-', color='b')
     # Update function for the slider
     def update(val):
         nonlocal is_selected
-        frame = slider.val# integer value of the slider starting from 1
+        frame = slider.val  # integer value of the slider starting from 1
         row_number = subset_start + frame
-        # Set slider label to show the row number instead of frame
         slider.valtext.set_text(f"Row: {row_number}")
-    # Find the closest event index that is less than or equal to the current row_number
+        
+        # Find the closest event index that is less than or equal to the current row_number
         past_events = event_indices[event_indices <= row_number]
         if not past_events.empty:
-            latest_event_index = past_events[-1]  # Get the last past event index
+            latest_event_index = past_events[-1]
             event_text.set_text(f"Event: {events[latest_event_index]}")
         
-
-        # Iterate through the events, updating the `is_selected` state based on events
-        if row_number in selected_indices:
-            is_selected = True
-            #print("SELECTED at row", row_number)
-        elif row_number in released_indices:
-            is_selected = False
-        color = 'g' if is_selected else 'b'
-        # Update line based on toggle status
+        # Determine the color for each point up to the current frame
+        colors = []
+        is_selected = False
+        for i in range(frame):
+            point_row_number = subset_start + i + 1  # Adjust point row to current subset
+            if point_row_number in selected_indices:
+                is_selected = True
+            elif point_row_number in released_indices:
+                is_selected = False
+            colors.append('g' if is_selected else 'b')
+        
+        # Update either the full trajectory or the single point based on toggle
         if show_trajectory:
-            line.set_data(x[:frame], y[:frame])
-            line.set_3d_properties(z[:frame])
+            scat._offsets3d = (x[:frame], y[:frame], z[:frame])
+            scat.set_color(colors)  # Apply colors to each point
+            line.set_data([], [])  # Hide line when showing full trajectory
+            line.set_3d_properties([])
         else:
-            # Only show current point
+            # Show only the current point
             line.set_data([x[frame-1]], [y[frame-1]])
             line.set_3d_properties([z[frame-1]])
-
-        line.set_color(color)
+            line.set_color('g' if is_selected else 'b')  # Current point color only
+            scat._offsets3d = ([], [], [])  # Hide scatter when showing single point
+        
         fig.canvas.draw_idle()
+
 
     # Toggle function for checkbox to show/hide trajectory
     def toggle_trajectory(label):
@@ -150,7 +162,7 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     plt.show()
 
 # Load the data
-file_path = '/Users/jerry/Desktop/AR/Row_data/008/DEPTH0_2024-09-19_09-41-35/bodyPose.csv'
+file_path = 'Row_data/003/DEPTH0_2024-09-18_18-36-28/bodyPose.csv'
 data_df = pd.read_csv(file_path)
 
 # subset_start = 33905
@@ -164,14 +176,14 @@ task_end_indices = slider_events[slider_events.str.contains("FINISHED TASK Slide
 released_indices = slider_events[slider_events.str.contains("RELEASED")].index
 score_events = slider_events[slider_events.str.contains("SCORE TASK") & slider_events.str.contains("MRTK")]
 #for some reason STARTED TASK Sliders 1 is not in the event message, so we need to add it manually
-# task_start_indices = task_start_indices.insert(0, 19739)#for 001
+#task_start_indices = task_start_indices.insert(0, 19739)#for 001
 # task_start_indices = task_start_indices.insert(0, 33043)#for 002
-# task_start_indices = task_start_indices.insert(0, 16444)#for 003
-# task_start_indices = task_start_indices.insert(0, 23755)#for 004
-# task_start_indices = task_start_indices.insert(0, 33304)#for 005
+task_start_indices = task_start_indices.insert(0, 16444)#for 003
+#task_start_indices = task_start_indices.insert(0, 23755)#for 004
+#task_start_indices = task_start_indices.insert(0, 33304)#for 005
 # task_start_indices = task_start_indices.insert(0, 31714)#for 006
 # task_start_indices = task_start_indices.insert(0, 24944)#for 007
-task_start_indices = task_start_indices.insert(0, 16588)#for 008
+#task_start_indices = task_start_indices.insert(0, 16588)#for 008
     # Print to see
 with pd.option_context('display.max_colwidth', None):
     print("Slider Events without training:")

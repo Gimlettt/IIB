@@ -1,0 +1,9 @@
+Rating	Tally	Weight
+Mental Demand	35	2	0.13333333333333333
+Physical Demand	75	3	0.2
+Temporal Demand	50	0	0
+Performance	75	5	0.3333333333333333
+Effort	55	4	0.26666666666666666
+Frustration	55	1	0.06666666666666667
+
+Overall = 63

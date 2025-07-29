@@ -1,0 +1,11 @@
+#question, response[Q1-Q14:Skipped,0-6]
+Q1, 0
+Q2, 2
+Q3, 1
+Q4, 3
+Q5, 2
+Q6, 3
+Q7, 1
+Q8, 4
+Q9, 0
+Q10, 2

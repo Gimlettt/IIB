@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, CheckButtons
-from Process_Slider import process_slider_events
 import re
 from datetime import datetime
-import threading
+from matplotlib.ticker import MaxNLocator
+
 
 def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset_end):
 
@@ -42,21 +42,69 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     selected_indices = events[events.str.contains("STARTED")].index
     released_indices = events[events.str.contains("STOPPED")].index
 
+    def set_axes_equal(ax):
 
+        x_limits = ax.get_xlim3d()
+        y_limits = ax.get_ylim3d()
+        z_limits = ax.get_zlim3d()
+
+        x_range = abs(x_limits[1] - x_limits[0])
+        x_middle = np.mean(x_limits)
+        y_range = abs(y_limits[1] - y_limits[0])
+        y_middle = np.mean(y_limits)
+        z_range = abs(z_limits[1] - z_limits[0])
+        z_middle = np.mean(z_limits)
+
+        plot_radius = 0.5 * max([x_range, y_range, z_range])
+
+        ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+        ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+        ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
     # Set up the figure and 3D plot
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Initialize line plot for trajectory
-    line, = ax.plot([], [], [], 'o-', color='b')
-    ax.set_xlim(-0.6, 0.6)#the unit is meter
+    # Remove grid
+    ax.grid(False)
+
+    # Remove ticks and tick labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_zticks([])
+
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_zticklabels([])
+    ax.tick_params(axis='both', which='both', length=0)
+
+    # Hide 3D panes (background walls)
+    ax.xaxis.pane.set_visible(False)
+    ax.yaxis.pane.set_visible(False)
+    ax.zaxis.pane.set_visible(False)
+
+    # Hide axis lines
+    ax.xaxis.line.set_visible(False)
+    ax.yaxis.line.set_visible(False)
+    ax.zaxis.line.set_visible(False)
+
+    # Set view angle (top-down onto x–z plane)
+    ax.view_init(elev=90, azim=-90)
+    
+    # Set limits
+    ax.set_xlim(-0.6, 0.6)
     ax.set_ylim(1.2, 2)
     ax.set_zlim(-1, 1)
-    ax.set_xlabel(x_col)
-    ax.set_ylabel(y_col)
-    ax.set_zlabel(z_col)
-    ax.set_title(f'Animating {x_col}, {y_col}, {z_col} Trajectory')
+    #set_axes_equal(ax)
+    # ax.set_xlabel("Indexfingertip X", fontsize=16, labelpad=20)
+    # ax.set_ylabel("Indexfingertip Y", fontsize=16, labelpad=20)
+    # ax.set_zlabel("Indexfingertip Z", fontsize=16, labelpad=20)
+    # ax.tick_params(axis='x', labelsize=15, pad=10)
+    # ax.tick_params(axis='y', labelsize=15, pad=10)
+    # ax.tick_params(axis='z', labelsize=15, pad=10)
+ 
+
+    #ax.set_title(f'Animating {x_col}, {y_col}, {z_col} Trajectory')
 
     # calibrate_x =-0.1453
     # calibrate_y = 1.48
@@ -72,11 +120,16 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
             print("Calibration event not found or malformed.")
             return None, None, None
 
-    calibrate_x, calibrate_y, calibrate_z = get_calibration_position(events)
+    #calibrate_x, calibrate_y, calibrate_z = get_calibration_position(events)
+    calibrate_x, calibrate_y, calibrate_z = 0,0,0
+    
+    
+    
+    
     # Display a static target plane
     plane_x = calibrate_x + 0.1
     plane_y = np.linspace(calibrate_y - 0.25, calibrate_y + 0.25, 10)
-    plane_z = np.full_like(plane_y, calibrate_z + 0.55)
+    plane_z = np.full_like(plane_y, calibrate_z + 0.58)
     X, Y = np.meshgrid(np.linspace(plane_x - 0.25, plane_x + 0.25, 10), plane_y)
     Z = np.full_like(X, plane_z)
     ax.plot_surface(X, Y, Z, color='r', alpha=0.5)
@@ -88,37 +141,50 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     show_trajectory = True
     # Initialize the state variable
     is_selected = False  # Starts as False, assuming "RELEASED" initially
+
+    # Scatter plot for trajectory points
+    scat = ax.scatter([], [], [], c=[], cmap='bwr', s=10)  # Initialize empty scatter plot with color map
+
+    # Initialize line plot for single-point view
+    line, = ax.plot([], [], [], 'o-', color='b')
     # Update function for the slider
     def update(val):
         nonlocal is_selected
-        frame = slider.val# integer value of the slider starting from 1
+        frame = slider.val  # integer value of the slider starting from 1
         row_number = subset_start + frame
-        # Set slider label to show the row number instead of frame
         slider.valtext.set_text(f"Row: {row_number}")
-    # Find the closest event index that is less than or equal to the current row_number
+        
+        # Find the closest event index that is less than or equal to the current row_number
         past_events = event_indices[event_indices <= row_number]
         if not past_events.empty:
-            latest_event_index = past_events[-1]  # Get the last past event index
-            event_text.set_text(f"Event: {events[latest_event_index]}")
+            latest_event_index = past_events[-1]
+            #this print the event text
+            #event_text.set_text(f"Event: {events[latest_event_index]}")
         
-
-        # Iterate through the events, updating the `is_selected` state based on events
-        if row_number in selected_indices:
-            is_selected = True
-            #print("SELECTED at row", row_number)
-        elif row_number in released_indices:
-            is_selected = False
-        color = 'g' if is_selected else 'b'
-        # Update line based on toggle status
+        # Determine the color for each point up to the current frame
+        colors = []
+        is_selected = False
+        for i in range(frame):
+            point_row_number = subset_start + i + 1  # Adjust point row to current subset
+            if point_row_number in selected_indices:
+                is_selected = True
+            elif point_row_number in released_indices:
+                is_selected = False
+            colors.append('g' if is_selected else 'b')
+        
+        # Update either the full trajectory or the single point based on toggle
         if show_trajectory:
-            line.set_data(x[:frame], y[:frame])
-            line.set_3d_properties(z[:frame])
+            scat._offsets3d = (x[:frame], y[:frame], z[:frame])
+            scat.set_color(colors)  # Apply colors to each point
+            line.set_data([], [])  # Hide line when showing full trajectory
+            line.set_3d_properties([])
         else:
-            # Only show current point
+            # Show only the current point
             line.set_data([x[frame-1]], [y[frame-1]])
             line.set_3d_properties([z[frame-1]])
-
-        line.set_color(color)
+            line.set_color('g' if is_selected else 'b')  # Current point color only
+            scat._offsets3d = ([], [], [])  # Hide scatter when showing single point
+        
         fig.canvas.draw_idle()
 
     # Toggle function for checkbox to show/hide trajectory
@@ -139,9 +205,9 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     slider.on_changed(update)
 
     # Add a checkbox to toggle display of previous data points
-    ax_checkbox = plt.axes([0.8, 0.06, 0.15, 0.1], facecolor='lightgoldenrodyellow')# x,y,width,height relative to the figure
-    checkbox = CheckButtons(ax_checkbox, ['Show Trajectory'], [True])
-    checkbox.on_clicked(toggle_trajectory)
+    # ax_checkbox = plt.axes([0.8, 0.06, 0.15, 0.1], facecolor='lightgoldenrodyellow')# x,y,width,height relative to the figure
+    # checkbox = CheckButtons(ax_checkbox, ['Show Trajectory'], [True])
+    # checkbox.on_clicked(toggle_trajectory)
 
     fig.canvas.mpl_connect('key_press_event', on_key)
 
@@ -151,11 +217,8 @@ def animate_trajectory_with_slider(data, x_col, y_col, z_col,subset_start,subset
     plt.show()
 
 # Load the data
-file_path = '/Users/jerry/Desktop/AR/Row_data/008/DEPTH0_2024-09-19_09-41-35/bodyPose.csv'
+file_path = 'WC_2025-03-19_16-01-31/bodyPose.csv'
 data_df = pd.read_csv(file_path)
-
-# subset_start = 33905
-# subset_end = 34892
 
 # Filter events that contain both "EVENT:" and "slider" in the second column
 slider_events = data_df[data_df.iloc[:, 1].str.contains("DRAW")|data_df.iloc[:, 1].str.contains("Sketch")].iloc[:, 1]
@@ -164,14 +227,14 @@ task_start_indices = slider_events[slider_events.str.contains("STARTED TASK Sket
 task_end_indices = slider_events[slider_events.str.contains("FINISHED TASK Sketching")].index
 released_indices = slider_events[slider_events.str.contains("STOPPED")].index
 #for some reason STARTED TASK Sliders 1 is not in the event message, so we need to add it manually
-task_start_indices = task_start_indices.insert(0, 20802)#for 001
-# task_start_indices = task_start_indices.insert(0, 33043)#for 002
-# task_start_indices = task_start_indices.insert(0, 16444)#for 003
-# task_start_indices = task_start_indices.insert(0, 23755)#for 004
-# task_start_indices = task_start_indices.insert(0, 33304)#for 005
-# task_start_indices = task_start_indices.insert(0, 31714)#for 006
-# task_start_indices = task_start_indices.insert(0, 24944)#for 007
-# task_start_indices = task_start_indices.insert(0, 16588)#for 008
+task_start_indices = task_start_indices.insert(0, 16035)#for 001
+#task_start_indices = task_start_indices.insert(0, 38877)#for 002
+#task_start_indices = task_start_indices.insert(0, 21199)#for 003
+#task_start_indices = task_start_indices.insert(0, 28578)#for 004
+#task_start_indices = task_start_indices.insert(0, 38287)#for 005
+#task_start_indices = task_start_indices.insert(0, 36788)#for 006
+#task_start_indices = task_start_indices.insert(0, 29930 )#for 007
+#task_start_indices = task_start_indices.insert(0, 20802)#for 008
     # Print to see
 with pd.option_context('display.max_colwidth', None):
     print("Sketching Events without training:")
@@ -194,7 +257,7 @@ for start, end in zip(task_start_indices, task_end_indices):
     print(f"Animating Task from row {start} to {end+100}")# to further see the hand movement after the task is finished
     
     # Run the animation for the task
-    animate_trajectory_with_slider(data_df, 'rightHandIndexTip_pos_x', 'rightHandIndexTip_pos_y', 'rightHandIndexTip_pos_z', start, end+100)
+    animate_trajectory_with_slider(data_df, 'rightHandIndexTipSH_pos_x', 'rightHandIndexTipSH_pos_y', 'rightHandIndexTipSH_pos_z', start, end+100)
     
     # After animation, prompt for labels for "RELEASED" events in this task
     task_released_indices = released_indices[(released_indices >= start) & (released_indices <= end)]
@@ -210,7 +273,7 @@ for start, end in zip(task_start_indices, task_end_indices):
 
 # Get the current date and time for the filename
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-filename = f"slider_task_labels_{timestamp}.csv"
+filename = f"Sketching_task_labels_{timestamp}.csv"
 
 print(lables)
 
